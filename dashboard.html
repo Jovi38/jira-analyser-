@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Reopen Intelligence — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+    --bg:             #f5f7fa;
+    --surface:        #ffffff;
+    --border:         #e4e9f0;
+    --text:           #1f2933;
+    --muted:          #7b8794;
+    --accent:         #2d3e50;
+    --danger:         #e5484d;
+    --warning:        #f5a524;
+    --safe:           #2bb673;
+    --info:           #3b82f6;
+    --purple:         #8b5cf6;
+    --client-release: #2bb673;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Inter, sans-serif; background: var(--bg); color: var(--text); padding: 32px; }
+
+.header { margin-bottom: 28px; }
+.header h1 { font-family: Syne, sans-serif; font-size: 28px; color: var(--accent); }
+.meta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 12px; }
+.meta-tag { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; color: var(--muted); }
+.meta-tag strong { color: var(--text); }
+.meta-tag.sprint-tag { background: #eff6ff; border-color: #bfdbfe; color: var(--info); }
+.meta-tag.sprint-tag strong { color: #1d4ed8; }
+
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 24px; }
+.section-title { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 18px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* KPI */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.kpi-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px; }
+.kpi-value { font-size: 26px; font-weight: 700; line-height: 1.1; }
+.kpi-sub   { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+.col-total   { color: var(--accent); }
+.col-danger  { color: var(--danger); }
+.col-warning { color: var(--warning); }
+.col-safe    { color: var(--safe); }
+.col-info    { color: var(--info); }
+.col-purple  { color: var(--purple); }
+.col-cr      { color: var(--client-release); }
+.col-muted   { color: var(--muted); }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 8px 12px; border-bottom: 2px solid var(--border); text-align: left; white-space: nowrap; }
+tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: #f9fafc; }
+.table-scroll { overflow-x: auto; }
+
+/* Progress bar */
+.bar-wrap  { display: flex; align-items: center; gap: 8px; }
+.bar-bg    { flex: 1; height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; min-width: 50px; }
+.bar-fill  { height: 100%; border-radius: 4px; background: var(--safe); }
+.bar-fill.danger  { background: var(--danger); }
+.bar-fill.warning { background: var(--warning); }
+.bar-label { font-size: 11px; color: var(--muted); min-width: 36px; text-align: right; }
+
+/* Badges */
+.badge         { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 5px; border: 1px solid var(--border); background: var(--bg); color: var(--text); margin: 2px; }
+.badge-cr      { background: #f0fdf4; border-color: #bbf7d0; color: var(--safe); }
+.badge-open    { background: #eff6ff; border-color: #bfdbfe; color: var(--info); }
+.badge-wip     { background: #fffbeb; border-color: #fde68a; color: var(--warning); }
+.badge-testing { background: #f5f3ff; border-color: #ddd6fe; color: var(--purple); }
+.badge-reopen  { background: #fff0f0; border-color: #fca5a5; color: var(--danger); }
+
+/* Expand rows */
+.expand-trigger { cursor: pointer; }
+.expand-trigger:hover td { background: #f0f4f8; }
+.expand-row { display: none; }
+.expand-row.open { display: table-row; }
+.expand-content { padding: 16px; background: #f9fafc; border-bottom: 1px solid var(--border); font-size: 12px; }
+
+/* Status pills */
+.status-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.status-pill  { font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+.sp-open    { background: #eff6ff; color: var(--info); }
+.sp-cr      { background: #f0fdf4; color: var(--safe); }
+.sp-wip     { background: #fffbeb; color: var(--warning); }
+.sp-testing { background: #f5f3ff; color: var(--purple); }
+.sp-reopen  { background: #fff0f0; color: var(--danger); }
+.sp-other   { background: var(--bg); color: var(--muted); }
+
+/* Clickable number */
+.clickable-num { cursor: pointer; text-decoration: underline dotted; font-weight: 700; }
+.clickable-num:hover { opacity: 0.75; }
+
+/* Team */
+.team-card { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+.team-lead-bar { background: var(--accent); color: white; padding: 12px 16px; font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+.team-lead-bar .lead-kpis { display: flex; gap: 16px; font-size: 12px; opacity: 0.85; }
+
+.empty { font-size: 13px; color: var(--muted); padding: 12px 0; }
+
+/* ── Info Icon Buttons (RCA / Resolution / UTC) ── */
+.info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    background: transparent;
+    padding: 0;
+}
+.info-btn:hover { transform: scale(1.2); opacity: 0.8; }
+.info-btn.tick  { color: var(--safe); }
+.info-btn.cross { color: var(--danger); pointer-events: none; }
+
+/* ── Popup Overlay ── */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.popup-overlay.open {
+    display: flex;
+}
+.popup-box {
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 560px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: popIn 0.18s ease;
+}
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.95) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+}
+.popup-header-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.popup-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--muted);
+    line-height: 1;
+    padding: 0 4px;
+}
+.popup-close:hover { color: var(--text); }
+.popup-body {
+    overflow-y: auto;
+    padding: 20px;
+    flex: 1;
+}
+.popup-section {
+    margin-bottom: 18px;
+}
+.popup-section:last-child { margin-bottom: 0; }
+.popup-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+}
+.popup-section-text {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.popup-ticket-ref {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+/* Filter bar inside expand */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.filter-btn { padding: 4px 12px; font-size: 11px; font-weight: 600; border-radius: 6px; border: 1px solid var(--border); background: white; cursor: pointer; color: var(--muted); }
+.filter-btn:hover, .filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* People roles */
+.role-section { margin-bottom: 8px; }
+.role-label   { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 3px; }
+.name-chips   { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* Reopen analysis cards */
+.ra-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.ra-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; background: var(--surface); }
+.ra-key  { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.ra-summary { font-size: 12px; color: var(--text); margin-bottom: 10px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ra-rows { display: flex; flex-direction: column; gap: 5px; }
+.ra-row  { display: flex; justify-content: space-between; font-size: 12px; }
+.ra-row-label { color: var(--muted); }
+.ra-row-val   { font-weight: 600; color: var(--text); }
+.ra-count { display: inline-block; background: #fff0f0; border: 1px solid #fca5a5; color: var(--danger); border-radius: 5px; padding: 1px 7px; font-size: 12px; font-weight: 700; }
+
+.back-btn { display: inline-block; margin-top: 8px; padding: 10px 20px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none; }
+.back-btn:hover { background: #1b2836; }
+</style>
+</head>
+<body>
+
+
+<div class="header">
+    <h1>Reopen Intelligence</h1>
+    <div class="meta-row">
+        <span class="meta-tag">Date range: <strong>{{ data.date_range_start }} → {{ data.date_range_end }}</strong></span>
+        <span class="meta-tag">Generated: <strong>{{ data.generated_at }}</strong></span>
+        {% if data.sprint_label and data.sprint_label != 'Unknown' %}
+        <span class="meta-tag sprint-tag">🏃 Sprint: <strong>{{ data.sprint_label }}</strong></span>
+        {% endif %}
+    </div>
+</div>
+
+
+<!-- ══ 1. KPI OVERVIEW ══ -->
+<div class="section">
+    <div class="section-title">Overview</div>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Total Tickets</div>
+            <div class="kpi-value col-total">{{ data.total }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Reopens</div>
+            <div class="kpi-value col-danger">{{ data.reopened }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Open</div>
+            <div class="kpi-value col-info">{{ data.status_counts.get('open', 0) }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Work In Progress</div>
+            <div class="kpi-value col-warning">{{ data.status_counts.get('wip', 0) }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Testing</div>
+            <div class="kpi-value col-purple">{{ data.status_counts.get('testing', 0) }}</div>
+        </div>
+        <div class="kpi-card" style="border-color:#bbf7d0">
+            <div class="kpi-label" style="color:var(--safe)">Client Release</div>
+            <div class="kpi-value col-cr">{{ data.status_counts.get('client_release', 0) }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Reopen Rate</div>
+            <div class="kpi-value col-warning">{{ data.rate }}%</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Total Rework Time</div>
+            <div class="kpi-value col-info">{{ data.total_rework }}</div>
+            <div class="kpi-sub">logged on reopened tickets</div>
+        </div>
+        {% for status, count in data.status_counts.items() %}
+            {% if status not in ['open', 'wip', 'testing', 'client_release', 'reopened'] and count > 0 %}
+            <div class="kpi-card">
+                <div class="kpi-label">{{ status | title }}</div>
+                <div class="kpi-value col-muted">{{ count }}</div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+
+<!-- ══ 2. DEVELOPER PERFORMANCE ══ -->
+<div class="section">
+    <div class="section-title">Developer Performance</div>
+    {% if data.developer_stats %}
+    <div class="table-scroll">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Assigned</th>
+                <th>Client Release</th>
+                <th>Reopened</th>
+                <th>Completion %</th>
+                <th>Reopen %</th>
+                <th>Time Logged</th>
+                <th>Total Original Est.</th>
+                <th>Status Breakdown</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for dev in data.developer_stats | sort(attribute='assigned', reverse=True) %}
+            <tr class="expand-trigger" onclick="toggleRow('dev-{{ loop.index }}')">
+                <td><strong style="color:var(--accent)">{{ dev.name }}</strong></td>
+
+                <td>
+                    <span class="clickable-num col-total"
+                          onclick="event.stopPropagation(); filterTickets('dev-{{ loop.index }}', 'all')">
+                        {{ dev.assigned }}
+                    </span>
+                </td>
+
+                <td>
+                    <span class="clickable-num col-cr"
+                          onclick="event.stopPropagation(); filterTickets('dev-{{ loop.index }}', 'cr')">
+                        {{ dev.completed }}
+                    </span>
+                </td>
+
+                <td>
+                    <span class="clickable-num col-danger"
+                          onclick="event.stopPropagation(); filterTickets('dev-{{ loop.index }}', 'reopened')">
+                        {{ dev.reopened }}
+                    </span>
+                </td>
+
+                <td>
+                    <div class="bar-wrap">
+                        <div class="bar-bg"><div class="bar-fill" data-width="{{ dev.completion_pct }}"></div></div>
+                        <span class="bar-label">{{ dev.completion_pct }}%</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="bar-wrap">
+                        <div class="bar-bg">
+                            {% if dev.reopen_pct > 20 %}<div class="bar-fill danger" data-width="{{ dev.reopen_pct }}"></div>
+                            {% elif dev.reopen_pct > 10 %}<div class="bar-fill warning" data-width="{{ dev.reopen_pct }}"></div>
+                            {% else %}<div class="bar-fill" data-width="{{ dev.reopen_pct }}"></div>{% endif %}
+                        </div>
+                        <span class="bar-label">{{ dev.reopen_pct }}%</span>
+                    </div>
+                </td>
+                <td><span class="col-info">{{ dev.time_spent }}</span></td>
+                <td><span class="col-muted" style="font-weight:600">{{ dev.total_original_est }}</span></td>
+                <td>
+                    <div class="status-pills">
+                        {% if dev.status_breakdown.get('open', 0) > 0 %}<span class="status-pill sp-open">Open {{ dev.status_breakdown.get('open', 0) }}</span>{% endif %}
+                        {% if dev.status_breakdown.get('wip', 0) > 0 %}<span class="status-pill sp-wip">WIP {{ dev.status_breakdown.get('wip', 0) }}</span>{% endif %}
+                        {% if dev.status_breakdown.get('testing', 0) > 0 %}<span class="status-pill sp-testing">Testing {{ dev.status_breakdown.get('testing', 0) }}</span>{% endif %}
+                        {% if dev.status_breakdown.get('client_release', 0) > 0 %}<span class="status-pill sp-cr">CR {{ dev.status_breakdown.get('client_release', 0) }}</span>{% endif %}
+                        {% if dev.status_breakdown.get('reopened', 0) > 0 %}<span class="status-pill sp-reopen">Reopen {{ dev.status_breakdown.get('reopened', 0) }}</span>{% endif %}
+                    </div>
+                </td>
+                <td style="color:var(--muted);font-size:11px">▼</td>
+            </tr>
+
+            <!-- Expand panel -->
+            <tr class="expand-row" id="dev-{{ loop.index }}">
+                <td colspan="10">
+                    <div class="expand-content">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                            <strong style="font-size:13px">{{ dev.name }} — {{ dev.assigned }} Ticket(s) &nbsp;|&nbsp; Time Logged: <span class="col-info">{{ dev.time_spent }}</span> &nbsp;|&nbsp; Total Est.: <span class="col-muted">{{ dev.total_original_est }}</span></strong>
+                            <div class="filter-bar">
+                                <button class="filter-btn active" onclick="filterTickets('dev-{{ loop.index }}', 'all')">All ({{ dev.assigned }})</button>
+                                <button class="filter-btn" onclick="filterTickets('dev-{{ loop.index }}', 'cr')">Client Release ({{ dev.completed }})</button>
+                                <button class="filter-btn" onclick="filterTickets('dev-{{ loop.index }}', 'reopened')">Reopened ({{ dev.reopened }})</button>
+                            </div>
+                        </div>
+
+                        <div class="table-scroll">
+                        <table id="ticket-table-dev-{{ loop.index }}">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Summary</th>
+                                    <th>Status</th>
+                                    <th>Original Est.</th>
+                                    <th>Time Logged</th>
+                                    <th>Assignee / Reporter</th>
+                                    <th>Resolution</th>
+                                    <th>RCA</th>
+                                    <th>Unit Test</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for t in dev.ticket_detail %}
+                                <tr data-filter-cr="{{ 'true' if t.is_cr else 'false' }}"
+                                    data-filter-reopened="{{ 'true' if t.is_reopened else 'false' }}">
+                                    <td><strong>{{ t.key }}</strong></td>
+                                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ t.summary }}">{{ t.summary }}</td>
+                                    <td>
+                                        {% if t.status_cat == 'client_release' %}<span class="badge badge-cr">{{ t.status }}</span>
+                                        {% elif t.status_cat == 'open' %}<span class="badge badge-open">{{ t.status }}</span>
+                                        {% elif t.status_cat == 'wip' %}<span class="badge badge-wip">{{ t.status }}</span>
+                                        {% elif t.status_cat == 'testing' %}<span class="badge badge-testing">{{ t.status }}</span>
+                                        {% elif t.status_cat == 'reopened' %}<span class="badge badge-reopen">{{ t.status }}</span>
+                                        {% else %}<span class="badge">{{ t.status }}</span>{% endif %}
+                                    </td>
+                                    <td>{{ t.original_estimate or '—' }}</td>
+                                    <td>{{ t.time or '—' }}</td>
+                                    <td>
+                                        {% if t.people %}
+                                            {% for role, names in t.people.items() if role != 'Creator' %}
+                                                <div class="role-section">
+                                                    <div class="role-label">{{ role }}</div>
+                                                    <div class="name-chips">{% for n in names %}<span class="badge">{{ n }}</span>{% endfor %}</div>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}—{% endif %}
+                                    </td>
+
+                                    <!-- Resolution -->
+                                    <td style="text-align:center">
+                                        {% if t.has_resolution %}
+                                            <button class="info-btn tick"
+                                                data-key="{{ t.key }}" data-type="resolution"
+                                                onclick="event.stopPropagation(); openDialog(this)"
+                                                title="View Resolution">✔</button>
+                                        {% else %}
+                                            <span class="info-btn cross" title="No Resolution">✘</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- RCA -->
+                                    <td style="text-align:center">
+                                        {% if t.has_rca %}
+                                            <button class="info-btn tick"
+                                                data-key="{{ t.key }}" data-type="rca"
+                                                onclick="event.stopPropagation(); openDialog(this)"
+                                                title="View RCA">✔</button>
+                                        {% else %}
+                                            <span class="info-btn cross" title="No RCA">✘</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Unit Test -->
+                                    <td style="text-align:center">
+                                        {% if t.has_utc %}
+                                            <button class="info-btn tick"
+                                                data-key="{{ t.key }}" data-type="utc"
+                                                onclick="event.stopPropagation(); openDialog(this)"
+                                                title="View Unit Test">✔</button>
+                                        {% else %}
+                                            <span class="info-btn cross" title="No Unit Test">✘</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="empty">No developer data found.</div>
+    {% endif %}
+</div>
+
+
+<!-- ══ 3. TEAM STRUCTURE ══ -->
+<div class="section">
+    <div class="section-title">Team Structure</div>
+    {% if data.teams %}
+    {% for team in data.teams %}
+    <div class="team-card">
+        <div class="team-lead-bar">
+            <span>👑 {{ team.lead }}</span>
+            <div class="lead-kpis">
+                {% for m in team.members %}{% if m.is_lead %}
+                    <span>{{ m.assigned }} tickets</span>
+                    <span>{{ m.time_spent }} logged</span>
+                    <span>{{ m.reopen_rate }}% reopen</span>
+                {% endif %}{% endfor %}
+            </div>
+        </div>
+        <div style="padding:16px">
+        <table>
+            <thead>
+                <tr><th>Member</th><th>Role</th><th>Assigned</th><th>Reopened</th><th>Reopen %</th><th>Time Logged</th><th>Open</th><th>WIP</th><th>Testing</th><th>CR</th></tr>
+            </thead>
+            <tbody>
+            {% for member in team.members %}
+                <tr>
+                    <td><strong>{{ member.name }}</strong></td>
+                    <td>{% if member.is_lead %}<span class="badge" style="background:#e0e7ff;color:#4338ca;border-color:#c7d2fe">Lead</span>{% else %}<span class="badge">Dev</span>{% endif %}</td>
+                    <td>{{ member.assigned }}</td>
+                    <td class="col-danger">{{ member.reopened }}</td>
+                    <td>
+                        <div class="bar-wrap">
+                            <div class="bar-bg">
+                                {% if member.reopen_rate > 20 %}<div class="bar-fill danger" data-width="{{ member.reopen_rate }}"></div>
+                                {% elif member.reopen_rate > 10 %}<div class="bar-fill warning" data-width="{{ member.reopen_rate }}"></div>
+                                {% else %}<div class="bar-fill" data-width="{{ member.reopen_rate }}"></div>{% endif %}
+                            </div>
+                            <span class="bar-label">{{ member.reopen_rate }}%</span>
+                        </div>
+                    </td>
+                    <td class="col-info">{{ member.time_spent }}</td>
+                    <td class="col-info">{{ member.status_breakdown.get('open', 0) }}</td>
+                    <td class="col-warning">{{ member.status_breakdown.get('wip', 0) }}</td>
+                    <td class="col-purple">{{ member.status_breakdown.get('testing', 0) }}</td>
+                    <td class="col-cr">{{ member.status_breakdown.get('client_release', 0) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty">No team data. Add teams to teams.json.</div>
+    {% endif %}
+</div>
+
+
+<!-- ══ 4. REOPEN ANALYSIS ══ -->
+<div class="section">
+    <div class="section-title">Reopen Analysis</div>
+    {% if data.reopen_analysis %}
+    <div class="table-scroll">
+    <table>
+        <thead>
+            <tr>
+                <th>Ticket</th>
+                <th>Summary</th>
+                <th>Developer</th>
+                <th>Stage</th>
+                <th>Sprint</th>
+                <th>Start Date</th>
+                <th>Reopen Date</th>
+                <th>Times Reopened</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in data.reopen_analysis | sort(attribute='reopen_count', reverse=True) %}
+            <tr>
+                <td><strong>{{ item.key }}</strong></td>
+                <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ item.summary }}">{{ item.summary or '—' }}</td>
+                <td>{{ item.developer or '—' }}</td>
+                <td>{{ item.status or '—' }}</td>
+                <td>{{ item.sprint or '—' }}</td>
+                <td>{{ item.start_date or '—' }}</td>
+                <td>{{ item.reopen_date or '—' }}</td>
+                <td><span class="ra-count">{{ item.reopen_count }}</span></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="empty">No reopen analysis data available.</div>
+    {% endif %}
+</div>
+
+
+<a href="/" class="back-btn">← Run Another Analysis</a>
+
+<script>
+// ── Ticket data store (written by server, no HTML-escaping issues) ──
+const TICKET_DATA = {};
+{% for dev in data.developer_stats %}
+  {% for t in dev.ticket_detail %}
+TICKET_DATA[{{ t.key | tojson }}] = {
+  key:                {{ t.key | tojson }},
+  resolution:         {{ (t.resolution or '') | tojson }},
+  resolution_details: {{ (t.resolution_details or '') | tojson }},
+  rca:                {{ (t.rca_data.rca or '') | tojson }},
+  rca_details:        {{ (t.rca_data.rca_details or '') | tojson }},
+  reopen_rca:         {{ (t.rca_data.reopen_rca or '') | tojson }},
+  reopen_rca_details: {{ (t.rca_data.reopen_rca_details or '') | tojson }},
+  utc:                {{ (t.utc or '') | tojson }},
+  utc_cases:          {{ (t.utc_cases or '') | tojson }}
+};
+  {% endfor %}
+{% endfor %}
+
+// ── Progress bars ──
+document.querySelectorAll(".bar-fill[data-width]").forEach(el => {
+    const w = parseFloat(el.getAttribute("data-width")) || 0;
+    el.style.width = Math.min(w, 100) + "%";
+});
+
+// ── Toggle expand row ──
+function toggleRow(id) {
+    const row = document.getElementById(id);
+    if (row) row.classList.toggle("open");
+}
+
+// ── Filter tickets ──
+function filterTickets(devId, mode) {
+    const row = document.getElementById(devId);
+    if (!row) return;
+    if (!row.classList.contains("open")) row.classList.add("open");
+    const table = row.querySelector("table");
+    if (!table) return;
+    table.querySelectorAll("tbody tr").forEach(tr => {
+        if (mode === "all")           tr.style.display = "";
+        else if (mode === "cr")       tr.style.display = tr.getAttribute("data-filter-cr")       === "true" ? "" : "none";
+        else if (mode === "reopened") tr.style.display = tr.getAttribute("data-filter-reopened") === "true" ? "" : "none";
+    });
+    const filterBar = row.querySelector(".filter-bar");
+    if (filterBar) {
+        filterBar.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+        const modeMap = { all: 0, cr: 1, reopened: 2 };
+        const btns = filterBar.querySelectorAll(".filter-btn");
+        if (btns[modeMap[mode]]) btns[modeMap[mode]].classList.add("active");
+    }
+}
+
+// ── Dialog ──
+function openDialog(btn) {
+    const key  = btn.getAttribute("data-key");
+    const type = btn.getAttribute("data-type");
+    const d    = TICKET_DATA[key];
+    if (!d) { alert("No data found for " + key); return; }
+
+    let title, sections = [];
+
+    if (type === "resolution") {
+        title = "📋 Resolution — " + key;
+        if (d.resolution)         sections.push({ label: "Resolution",         text: d.resolution });
+        if (d.resolution_details) sections.push({ label: "Resolution Details", text: d.resolution_details });
+    } else if (type === "rca") {
+        title = "🔍 Root Cause Analysis — " + key;
+        if (d.rca)                sections.push({ label: "RCA",                           text: d.rca });
+        if (d.rca_details)        sections.push({ label: "RCA Details (Impact Analysis)", text: d.rca_details });
+        if (d.reopen_rca)         sections.push({ label: "Reopen RCA",                   text: d.reopen_rca });
+        if (d.reopen_rca_details) sections.push({ label: "Reopen RCA Details",            text: d.reopen_rca_details });
+    } else if (type === "utc") {
+        title = "🧪 Unit Test Case — " + key;
+        if (d.utc)       sections.push({ label: "Unit Test Case",  text: d.utc });
+        if (d.utc_cases) sections.push({ label: "Unit Test Cases", text: d.utc_cases });
+    }
+
+    if (!sections.length) { alert("No content available for " + key); return; }
+
+    // Build and show a native <dialog>
+    let existing = document.getElementById("ticketDialog");
+    if (existing) existing.remove();
+
+    const dlg = document.createElement("dialog");
+    dlg.id = "ticketDialog";
+    dlg.style.cssText = `
+        border: none; border-radius: 14px; padding: 0;
+        width: min(600px, 95vw); max-height: 85vh;
+        box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+        overflow: hidden; font-family: Inter, sans-serif;
+    `;
+
+    const sectionsHTML = sections.map(s => `
+        <div style="margin-bottom:20px">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;
+                        color:#7b8794;margin-bottom:8px;padding-bottom:6px;
+                        border-bottom:1px solid #e4e9f0">${esc(s.label)}</div>
+            <div style="font-size:13px;line-height:1.75;color:#1f2933;
+                        white-space:pre-wrap;word-break:break-word">${esc(s.text)}</div>
+        </div>
+    `).join("");
+
+    dlg.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:16px 20px;background:#f5f7fa;border-bottom:1px solid #e4e9f0">
+            <span style="font-size:14px;font-weight:700;color:#2d3e50">${esc(title)}</span>
+            <button onclick="document.getElementById('ticketDialog').close()"
+                style="background:none;border:none;font-size:22px;cursor:pointer;
+                       color:#7b8794;line-height:1;padding:0 4px">&times;</button>
+        </div>
+        <div style="padding:20px 24px;overflow-y:auto;max-height:calc(85vh - 60px)">
+            ${sectionsHTML}
+        </div>
+    `;
+
+    document.body.appendChild(dlg);
+    dlg.showModal();
+
+    // Close on backdrop click
+    dlg.addEventListener("click", e => {
+        const rect = dlg.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right ||
+            e.clientY < rect.top  || e.clientY > rect.bottom) {
+            dlg.close();
+        }
+    });
+}
+
+function esc(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+</script>
+
+</body>
+</html>
